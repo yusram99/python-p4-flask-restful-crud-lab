@@ -17,39 +17,65 @@ db.init_app(app)
 api = Api(app)
 
 
-class Plants(Resource):
-
+class PlantResource(Resource):
     def get(self):
-        plants = [plant.to_dict() for plant in Plant.query.all()]
-        return make_response(jsonify(plants), 200)
+        # Implement the Index Route
+        plants = Plant.query.all()
+        return [plant.to_dict() for plant in plants]
 
     def post(self):
+        # Implement the Create Route
         data = request.get_json()
+        name = data.get('name')
+        image = data.get('image')
+        price = data.get('price')
 
-        new_plant = Plant(
-            name=data['name'],
-            image=data['image'],
-            price=data['price'],
-        )
+        if not name or not image or price is None:
+            return {'error': 'Missing data'}, 400
 
+        new_plant = Plant(name=name, image=image, price=price)
         db.session.add(new_plant)
         db.session.commit()
 
-        return make_response(new_plant.to_dict(), 201)
+        return new_plant.to_dict(), 201
 
 
-api.add_resource(Plants, '/plants')
-
-
-class PlantByID(Resource):
-
+class PlantByIDResource(Resource):
     def get(self, id):
-        plant = Plant.query.filter_by(id=id).first().to_dict()
-        return make_response(jsonify(plant), 200)
+        # Implement the Show Route
+        plant = Plant.query.get(id)
+        if not plant:
+            return {'error': 'Plant not found'}, 404
+        return plant.to_dict(), 200
+
+    def patch(self, id):
+        # Implement the Update Route
+        plant = Plant.query.get(id)
+        if not plant:
+            return {'error': 'Plant not found'}, 404
+
+        data = request.get_json()
+        if 'is_in_stock' in data:
+            plant.is_in_stock = data['is_in_stock']
+            db.session.commit()
+
+        return plant.to_dict(), 200
+
+    def delete(self, id):
+        # Implement the Delete Route
+        plant = Plant.query.get(id)
+        if not plant:
+            return '', 204  # No Content
+
+        db.session.delete(plant)
+        db.session.commit()
+        return '', 204  # No Content
 
 
-api.add_resource(PlantByID, '/plants/<int:id>')
+# Add routes to the Flask-RESTful API
+api.add_resource(PlantResource, '/plants')
+api.add_resource(PlantByIDResource, '/plants/<int:id>')
 
 
 if __name__ == '__main__':
-    app.run(port=5555, debug=True)
+    app.run(port=5552, debug=True)
